@@ -23,8 +23,8 @@ int main(){
 
 	struct token_struct {
 		enum token_type type;
-		char* argument;
-		token* carry;
+		char* string_argument;
+		token* token_argument;
 	};
 
 }
