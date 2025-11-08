@@ -9,7 +9,7 @@ enum node_type;
 typedef struct node_struct node;
 
 int main(){
-	char* symbols[] = {"=", "+=", "-="};
+	char* symbols[] = {"+=", "-="};
 
 	enum token_type {
 		WORD = 128 + sizeof(symbols)/sizeof(symbols[0]), // 128 because that's where ASCII ends
