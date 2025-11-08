@@ -36,8 +36,9 @@ int main(int argc, char** argv){
 		node* right;
 	};
 
-	token code_lex[strlen(argv[1])]; // "argv[1]" because I don't want to have to deal with file management until I need to
-	for (int i = 0; i < strlen(argv[1]); i++){
+	size_t strlen_argv_1 = strlen(argv[1]);
+	token code_lex[strlen_argv_1]; // "argv[1]" because I don't want to have to deal with file management until I need to
+	for (int i = 0; i < strlen_argv_1; i++){
 		
 	}
 	
