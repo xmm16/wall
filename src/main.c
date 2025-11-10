@@ -10,7 +10,7 @@ enum node_type;
 struct node_struct;
 
 int check_different_sized_strings(char* original_string_literal, char* check_string_literal){
-	size_t strlen_check_string = strlen(check_string_literal);
+    size_t strlen_check_string = strlen(check_string_literal);
     size_t strlen_original_string = strlen(original_string_literal);
 
     char original_string[strlen_original_string];
@@ -27,6 +27,7 @@ int check_different_sized_strings(char* original_string_literal, char* check_str
         original_string[strlen_check_string] = replaced_char;
 
         return return_value;
+
     } else if (strlen_check_string > strlen_original_string){
         char replaced_char = check_string[strlen_original_string];
         check_string[strlen_original_string] = '\0';
@@ -35,8 +36,10 @@ int check_different_sized_strings(char* original_string_literal, char* check_str
         check_string[strlen_original_string] = replaced_char;
 
         return return_value;
+
     } else {
         return strcmp(original_string, check_string);
+
     }
 }
 
@@ -115,4 +118,5 @@ int main(int argc, char** argv){
 	code_tree.left = malloc(sizeof(node));
 	code_tree.right = malloc(sizeof(node));
 
+	return 0;
 }
