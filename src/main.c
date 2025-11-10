@@ -81,28 +81,25 @@ int main(int argc, char** argv){
 	size_t quote_buf_start;
 
 	for (int i = 0; i < strlen_argv_1; i++){
-		if (quote_mode){
-			if (raw_code[i] == '"' && raw_code[i - 1] != '\\'){
-				quote_mode--;
+		if (quote_mode && raw_code[i] == '"' && raw_code[i - 1] != '\\'){
+			quote_mode--;
 
-				int buf_size = i - quote_buf_start;
-				char* quote_arg = malloc(1 + buf_size); // free every string argument in quotes
-				strncpy(quote_arg, &raw_code[quote_buf_start], buf_size);
-				
-				while (code_lex_size < (code_lex_index + 1) * sizeof(token)){
-					code_lex_size *= 2;
-					code_lex = realloc(code_lex, code_lex_size);
-				}
-
-				code_lex[code_lex_index].type = '"';
-				code_lex[code_lex_index].string_argument = quote_arg;
-				code_lex[code_lex_index].token_argument = NULL;
-				
-				code_lex_index++;
-				continue;
+			int buf_size = i - quote_buf_start;
+			char* quote_arg = malloc(1 + buf_size); // free every string argument in quotes
+			strncpy(quote_arg, &raw_code[quote_buf_start], buf_size);
+			
+			while (code_lex_size < (code_lex_index + 1) * sizeof(token)){
+				code_lex_size *= 2;
+				code_lex = realloc(code_lex, code_lex_size);
 			}
+
+			code_lex[code_lex_index].type = '"';
+			code_lex[code_lex_index].string_argument = quote_arg;
+			code_lex[code_lex_index].token_argument = NULL;
+			
+			code_lex_index++;
 			continue;
-		}
+		} else if (quote_mode) continue;
 
 		if (raw_code[i] == '"'){
 			quote_mode++;
