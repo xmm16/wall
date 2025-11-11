@@ -4,20 +4,22 @@
 
 enum token_type;
 struct token_struct;
-char* symbols[] = {"+=", "-="};
-const size_t len_symbols = sizeof(symbols) / sizeof(symbols[0]);
+char* symbols[] = {"<<=", ">>=", "+=", "-=", "*=", "/=", "%=", "||", "&&",
+"==", "!=", ">=", "<=", "<<", ">>", "++", "--", "->"};
+#define LOCAL_LEN(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 enum node_type;
 struct node_struct;
 
 enum token_type {
-  WORD = 128 + len_symbols, // 128 because that's where ASCII ends
+  WORD = 128 + LOCAL_LEN(symbols), // 128 because that's where ASCII ends
   INT,
   FLOAT
 };
 
 enum node_type {
-  PROGRAM = 128 + len_symbols,
+  PROGRAM = 128 + LOCAL_LEN(symbols),
+  FUNCTION_CALL,
 };
 
 typedef struct token_struct {
@@ -49,11 +51,11 @@ void append_token(token** code_lex, size_t* code_lex_size, size_t* code_lex_inde
 }
 
 int number_or_dot(char symbol){
-        return (symbol >= 48 && symbol <=57) || (symbol == 46);
+        return (symbol >= '0' && symbol <= '9') || (symbol == '.');
 }
 
 int letter_number_or_underscore(char symbol){
-        return (symbol >= 48 && symbol <=57) || (symbol >= 65 && symbol <= 90) || (symbol >= 97 && symbol <= 122)|| (symbol == 95);
+        return (symbol >= '0' && symbol <= '9') || (symbol >= 'A' && symbol <= 'Z') || (symbol >= 'a' && symbol <= 'z')|| (symbol == '_');
 }
 
 token* lex(char* raw_code, size_t strlen_argv_1, size_t* code_lex_index_ptr){
@@ -156,8 +158,31 @@ token* lex(char* raw_code, size_t strlen_argv_1, size_t* code_lex_index_ptr){
       multi_comment_mode++;
       continue;
     }
-    
-    enum token_type type = WORD;
+
+    enum token_type type = INT;
+    size_t num_start = i;
+
+    while (number_or_dot(raw_code[i])){
+      if (raw_code[i] == '.') type = FLOAT;
+      i++;
+    }
+
+    if (i - num_start == 1 && type == FLOAT) {
+      type = '.';
+      num_start = i; // to avoid next conditional
+    }
+
+    if (num_start != i){ // if it's a number
+      char* string_argument = malloc(i - num_start + 1); // free every string argument in ints and floats too
+      strncpy(string_argument, &raw_code[num_start], i - num_start);
+      string_argument[i - num_start] = '\0';
+
+      append_token(&code_lex, &code_lex_size, &code_lex_index, type, string_argument, NULL);
+      i--;
+      continue;
+    }
+
+    type = WORD;
     size_t word_start = i;
 
     while (letter_number_or_underscore(raw_code[i])){
@@ -174,37 +199,22 @@ token* lex(char* raw_code, size_t strlen_argv_1, size_t* code_lex_index_ptr){
       continue;
     }
 
-    type = INT;
-    size_t num_start = i;
-
-    while (number_or_dot(raw_code[i])){
-      if (raw_code[i] == '.') type = FLOAT;
-      i++;
-    }
-
-    if (i - num_start == 1 && type == FLOAT) {
-      type = '.';
-      num_start = i; // to avoid next conditional
-    }
-
-    if (num_start != i){ // if it's a number
-      char* string_argument = malloc(i - num_start + 1); // free every string argument in ints and floats too
-      strncpy(string_argument, &raw_code[num_start], i - num_start);
-      string_argument[i - num_start + 1] = '\0';
-
-      append_token(&code_lex, &code_lex_size, &code_lex_index, type, string_argument, NULL);
-      i--;
-      continue;
-    }
-
     if (raw_code[i] == ' ' || raw_code[i] == '\t') continue;
     
-    for (int j = 0; j < len_symbols; j++){
-      if (strncmp(&raw_code[i], symbols[j], strlen(symbols[j]))){
+    int multi_char_symbol = 0;
+
+    for (int j = 0; j < LOCAL_LEN(symbols); j++){
+      size_t strlen_symbols_j = strlen(symbols[j]);
+
+      if (strncmp(&raw_code[i], symbols[j], strlen_symbols_j) == 0){
         append_token(&code_lex, &code_lex_size, &code_lex_index, 128 + j, NULL, NULL);
+        i += strlen_symbols_j - 1;
+        multi_char_symbol++;
+        break;
       }
     }
 
+    if (multi_char_symbol) continue;
     append_token(&code_lex, &code_lex_size, &code_lex_index, raw_code[i], NULL, NULL);
 	}
   
@@ -224,11 +234,32 @@ int main(int argc, char** argv){
     printf("string argument: %s\n", code_lex[i].string_argument);
   }
   
+  // MOVE THIS WHOLE SETUP TO ITS OWN FUNCTION SO THAT IT CAN RECURSE
 	node code_tree;
-	code_tree.type = PROGRAM;
+	node* code_tree_ptr;
+  code_tree.type = PROGRAM;
 	code_tree.back = NULL;
 	code_tree.left = malloc(sizeof(node));
 	code_tree.right = malloc(sizeof(node));
+  
+  for (int i = 0; i < code_lex_index; i++){
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wswitch"
+
+    switch (code_lex[i].type){
+      case '=': {
+        if (i >= 1 && code_lex[i - 1].type == '('){
+          if (i >= 2 && code_lex[i - 2].type == WORD){
+            code_tree_ptr->left->type = FUNCTION_CALL;
+            code_tree_ptr->left->back = code_tree_ptr;
+
+          }
+        }
+      }
+      default:
+        break;
+    }
+  }
 
 	return 0;
 }
