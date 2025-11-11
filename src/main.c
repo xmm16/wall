@@ -33,55 +33,17 @@ typedef struct node_struct {
   struct node_struct* right;
 } node;
 
-void append_token(token** code_lex, size_t* code_lex_size_ptr, size_t* code_lex_index_ptr, enum token_type type, char* string_argument, token* token_argument){ 
-  size_t code_lex_size = *code_lex_size_ptr;
-  size_t code_lex_index = *code_lex_index_ptr;
-
-  while (code_lex_size < (code_lex_index + 1) * sizeof(token)){
-    code_lex_size *= 2;
-    *code_lex = realloc(*code_lex, code_lex_size);
+void append_token(token** code_lex, size_t* code_lex_size, size_t* code_lex_index, enum token_type type, char* string_argument, token* token_argument){ 
+  while ((*code_lex_size) < ((*code_lex_index) + 1) * sizeof(token)){
+    (*code_lex_size) *= 2;
+    *code_lex = realloc(*code_lex, (*code_lex_size));
   }
 
-  code_lex[code_lex_index]->type = type;
-  code_lex[code_lex_index]->string_argument = string_argument;
-  code_lex[code_lex_index]->token_argument = token_argument;
+  (*code_lex)[(*code_lex_index)].type = type;
+  (*code_lex)[(*code_lex_index)].string_argument = string_argument;
+  (*code_lex)[(*code_lex_index)].token_argument = token_argument;
 
-  
-  code_lex_index++;
-}
-
-int check_different_sized_strings(char* original_string_literal, char* check_string_literal){
-    size_t strlen_check_string = strlen(check_string_literal);
-    size_t strlen_original_string = strlen(original_string_literal);
-
-    char original_string[strlen_original_string];
-    strcpy(original_string, original_string_literal);
-
-    char check_string[strlen_check_string];
-    strcpy(check_string, check_string_literal);
-
-    if (strlen_original_string > strlen_check_string){
-        char replaced_char = original_string[strlen_check_string];
-        original_string[strlen_check_string] = '\0';
-
-        int return_value = strcmp(original_string, check_string);
-        original_string[strlen_check_string] = replaced_char;
-
-        return return_value;
-
-    } else if (strlen_check_string > strlen_original_string){
-        char replaced_char = check_string[strlen_original_string];
-        check_string[strlen_original_string] = '\0';
-
-        int return_value = strcmp(original_string, check_string);
-        check_string[strlen_original_string] = replaced_char;
-
-        return return_value;
-
-    } else {
-        return strcmp(original_string, check_string);
-
-    }
+  (*code_lex_index)++;
 }
 
 int main(int argc, char** argv){
@@ -95,13 +57,28 @@ int main(int argc, char** argv){
 	int quote_mode = 0;
 	size_t quote_buf_start;
 
+  int comment_mode = 0;
+  int multi_comment_mode = 0;
+
 	for (int i = 0; i < strlen_argv_1; i++){
-		if (quote_mode && raw_code[i] == '"' && raw_code[i - 1] != '\\'){
+    if (raw_code[i] == '\\'){ // for escaping
+      i++;
+      continue;
+    }
+
+    if (comment_mode && raw_code[i] != '\n') continue;
+    else if (comment_mode) comment_mode--;
+
+    if (multi_comment_mode && strncmp(&raw_code[i], "*/", 2) != 0) continue;
+    else if (multi_comment_mode) multi_comment_mode--;
+
+		if (quote_mode && raw_code[i] == '"'){
 			quote_mode--;
 
 			int buf_size = i - quote_buf_start;
 			char* quote_arg = malloc(1 + buf_size); // free every string argument in quotes
 			strncpy(quote_arg, &raw_code[quote_buf_start], buf_size);
+      quote_arg[buf_size] = '\0';
       append_token(&code_lex, &code_lex_size, &code_lex_index, '"', quote_arg, NULL);
 
 			continue;
@@ -113,9 +90,20 @@ int main(int argc, char** argv){
 
 			continue;
 		}
-	}
 
-  printf("%s\n", code_lex[0].string_argument);
+    if (strncmp(&raw_code[i], "//", 2) == 0){
+      comment_mode++;
+      continue;
+    }
+    
+    if (strncmp(&raw_code[i], "/*", 2) == 0){
+      multi_comment_mode++;
+      continue;
+    }
+	}
+  
+
+  printf("%s\n", code_lex[0].string_argument); // for debug purposes only
 
 	node code_tree;
 	code_tree.type = PROGRAM;
