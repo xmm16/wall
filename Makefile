@@ -1,7 +1,7 @@
 SRC = src/*.c 
-END = wall.bin 
-END_D = wall_debug.bin
-END_O = wall_optimal.bin
+END = build/wall.bin 
+END_D = build/wall_debug.bin
+END_O = build/wall_optimal.bin
 
 COMP = gcc
 FLAGS = -I include

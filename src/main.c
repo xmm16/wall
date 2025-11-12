@@ -237,7 +237,7 @@ token* lex(char* raw_code, size_t strlen_argv_1, size_t* code_lex_index_ptr){
 }
 
 void tree(node* code_tree_ptr, token* code_lex, size_t code_lex_index){
-  
+	int literal = 1;
   for (int i = 0; i < code_lex_index; i++){
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wswitch"
@@ -252,7 +252,7 @@ void tree(node* code_tree_ptr, token* code_lex, size_t code_lex_index){
 	else if (get_symbol("&=")) goto ASSIGN;
 	else if (get_symbol("^=")) goto ASSIGN;
 	else if (get_symbol("|=")) goto ASSIGN;
-	goto SKIP_ASSIGN;
+	else goto SKIP_ASSIGN;
 	int id;
 ASSIGN:
 	id = '=';
@@ -270,8 +270,10 @@ SKIP_ASSIGN:
         i++;
         code_tree_ptr->left->left = malloc(sizeof(node));
         code_tree_ptr->left->left->type = PROGRAM;
+        code_tree_ptr->left->left->back = code_tree_ptr->left;
         code_tree_ptr->left->right = malloc(sizeof(node));
         code_tree_ptr->left->right->type = PROGRAM;
+	code_tree_ptr->left->right->back = code_tree_ptr->left;
 
         int restore_i_minus_i = restore_i - i;
         struct token_struct* left_token_argument = malloc(restore_i_minus_i);
@@ -286,23 +288,41 @@ SKIP_ASSIGN:
         struct token_struct* right_token_argument = malloc(i_minus_restore_i);
         memcpy(right_token_argument, &code_lex[restore_i + 1], i_minus_restore_i); 
 
-        code_tree_ptr->left->type = code_lex[i].type;
+        code_tree_ptr->left->type = code_lex[restore_i].type;
         code_tree_ptr->left->back = code_tree_ptr;
         
         tree(code_tree_ptr->left->left, left_token_argument, restore_i_minus_i);
-        tree(code_tree_ptr->left->left, left_token_argument, i_minus_restore_i);
+        tree(code_tree_ptr->left->right, right_token_argument, i_minus_restore_i);
 
 	code_tree_ptr->right->back = code_tree_ptr;
-        code_tree_ptr = code_tree_ptr->right;
-	code_tree_ptr->left = malloc(sizeof(node));
-	code_tree_ptr->right = malloc(sizeof(node));
-	code_tree_ptr->type = PROGRAM;
+	code_tree_ptr->right->left = malloc(sizeof(node));
+	code_tree_ptr->right->right = malloc(sizeof(node));
+	code_tree_ptr->right->type = PROGRAM;
+	tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+	literal = 0;
         break;
       }
       default:
         break;
+
     }
   }
+    if (literal){
+	code_tree_ptr->type = LITERAL;
+	code_tree_ptr->token_argument = code_lex;
+    }
+}
+
+void print_tree(node* root, size_t tabs){
+	for (int i = 0; i < tabs; i++) printf("   ");
+	printf("left type: %d\n", root->left->type);
+	if (root->left->type != LITERAL)
+		print_tree(root->left, tabs + 1);
+
+	for (int i = 0; i < tabs; i++) printf("   ");
+	printf("right type: %d\n", root->right->type);
+	if (root->right->type != LITERAL)
+		print_tree(root->right, tabs + 1);
 }
 
 int main(int argc, char** argv){
@@ -312,6 +332,7 @@ int main(int argc, char** argv){
   token* code_lex = lex(raw_code, strlen_argv_1, &code_lex_index);
 
   // FOR PRINTING LEX:
+  printf("PRINTED LEX:\n");
   for (int i = 0; i < code_lex_index; i++){
     printf("type: %d\n", code_lex[i].type);
     printf("string argument: %s\n", code_lex[i].string_argument);
@@ -326,6 +347,9 @@ int main(int argc, char** argv){
 	code_tree.right = malloc(sizeof(node));
   
   tree(code_tree_ptr, code_lex, code_lex_index);
-
+  
+  printf("\n");
+  print_tree(&code_tree, 0);
+//	printf("%d\n%d\n", PROGRAM, code_tree_ptr->type);
 	return 0;
 }
