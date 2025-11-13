@@ -1,0 +1,18 @@
+import wall as .
+import io
+
+main(argc: i32, argv): i32 = {
+  for i in ..10 {
+    listToSum ~ [77, 86, io.input("{j}{"th" if j % 2 == 0 else "st"} number: \n") for j in i..2] // ~ sign needs to be used instead of = sign when defining heap allocations
+                                                                                                 // also, : sign can be used to strong type, but not required
+    listToSum keep // keep can be used on heap or stack allocations
+                   // it can also be used like listToSum keep argc to keep it as
+                   // long as argc, or listToSum keep 1 to increase scope by one,
+                   // or it could be listToSum global
+    i += 4
+  }
+
+  for i in ..(len listToSum) {
+    out "{sum listToSum}"
+  }
+}
