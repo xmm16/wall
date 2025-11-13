@@ -237,6 +237,8 @@ token* lex(char* raw_code, size_t strlen_argv_1, size_t* code_lex_index_ptr){
 }
 
 void tree(node* code_tree_ptr, token* code_lex, size_t code_lex_index){
+  if (code_lex_index == 0) return;
+  printf("%d\n", code_lex_index);
 	int literal = 1;
   for (int i = 0; i < code_lex_index; i++){
     #pragma GCC diagnostic push
@@ -283,7 +285,7 @@ SKIP:
 	code_tree_ptr->left->right->back = code_tree_ptr->left;
 
         int restore_i_minus_i = restore_i - i;
-        struct token_struct* left_token_argument = malloc(restore_i_minus_i);
+        token* left_token_argument = malloc(sizeof(token) * restore_i_minus_i);
         memcpy(left_token_argument, &code_lex[i], restore_i_minus_i); // may not be valid, don't know yet
         
         i = restore_i;
@@ -292,14 +294,14 @@ SKIP:
         }
 
         int i_minus_restore_i = i - restore_i;
-        struct token_struct* right_token_argument = malloc(i_minus_restore_i);
-        memcpy(right_token_argument, &code_lex[restore_i + 1], i_minus_restore_i); 
+        token* right_token_argument = malloc(sizeof(token) * (i_minus_restore_i - 1));
+        memcpy(right_token_argument, &code_lex[restore_i + 1], i_minus_restore_i - 1); 
 
-        code_tree_ptr->left->type = code_lex[restore_i].type;
+        code_tree_ptr->left->type = (enum node_type) code_lex[restore_i].type;
         code_tree_ptr->left->back = code_tree_ptr;
         
         tree(code_tree_ptr->left->left, left_token_argument, restore_i_minus_i);
-        tree(code_tree_ptr->left->right, right_token_argument, i_minus_restore_i);
+        tree(code_tree_ptr->left->right, right_token_argument, i_minus_restore_i - 1);
 
 	code_tree_ptr->right->back = code_tree_ptr;
 	code_tree_ptr->right->left = malloc(sizeof(node));
