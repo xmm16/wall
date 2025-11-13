@@ -213,7 +213,7 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
       size_t lexed_paren_index;
       token *lexed_paren =
           lex(paren_arg, strlen(paren_arg), &lexed_paren_index);
-      if (code_lex_index > 0 && code_lex[code_lex_index - 1].type == WORD && code_lex[code_lex_index - 1].type == '(' && code_lex[code_lex_index - 1].type == ':') {
+      if (code_lex_index > 0 && (code_lex[code_lex_index - 1].type == WORD || code_lex[code_lex_index - 1].type == '(' || code_lex[code_lex_index - 1].type == ':')) {
         code_lex_index--;
         append_token_b(&code_lex, &code_lex_size, &code_lex_index, '{',
                      code_lex[code_lex_index].string_argument, lexed_paren);
@@ -246,13 +246,12 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
       size_t lexed_paren_index;
       token *lexed_paren =
           lex(paren_arg, strlen(paren_arg), &lexed_paren_index);
-      if (code_lex_index > 0 && code_lex[code_lex_index - 1].type == WORD && code_lex[code_lex_index - 1].type == '(' && code_lex[code_lex_index - 1].type == ':') {
+      if (code_lex_index > 0 && (code_lex[code_lex_index - 1].type == WORD || code_lex[code_lex_index - 1].type == '(' || code_lex[code_lex_index - 1].type == ':')) {
         code_lex_index--;
         append_token_c(&code_lex, &code_lex_size, &code_lex_index, ':',
                      code_lex[code_lex_index].string_argument, lexed_paren);
-      } else
-        append_token_c(&code_lex, &code_lex_size, &code_lex_index, ':', NULL,
-                     lexed_paren);
+      } else continue;
+
       code_lex[code_lex_index - 1].colon_length = lexed_paren_index;
       free(paren_arg);
 
