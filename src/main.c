@@ -935,10 +935,14 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
     switch (id) {
     case '-':
     case '+':;
+      if (i == 0 || (i > 0 && code_lex[i - 1].type != WORD && code_lex[i - 1].type != INT && code_lex[i - 1].type != FLOAT)){
+        break;
+      }
 
       int restore_i = i;
       i--;
-      while (i != -1 && code_lex[i].type != '+' && code_lex[i].type != '-') {
+      // an interrupting operator would have a word, int, or float immediately behind it
+      while (i != -1 && !(/*following is defining for interrupting operator*/ (code_lex[i].type == '+' || code_lex[i].type == '-') && (i > 0 && (code_lex[i - 1].type == WORD || code_lex[i - 1].type == INT || code_lex[i - 1].type == FLOAT)))) {
         i--;
       }
 
@@ -961,8 +965,7 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
 
       i = restore_i;
       i++;
-      while (i != code_lex_index && code_lex[i].type != '+' &&
-             code_lex[i].type != '-') {
+      while (i != code_lex_index && !(/*following is defining for interrupting operator*/ (code_lex[i].type == '+' || code_lex[i].type == '-') && (i > 0 && (code_lex[i - 1].type == WORD || code_lex[i - 1].type == INT || code_lex[i - 1].type == FLOAT)))) {
         i++;
       }
 
@@ -1063,34 +1066,56 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
       id = code_lex[i].type;
 
     switch (id) {
-      // case '+':
-      // case '-':{
-      // int restore_i = i + 1; // right
-      // i += 2;
-      // code_tree_ptr->left->left = malloc(sizeof(node));
-      // code_tree_ptr->left->left->type = PROGRAM;
-      // code_tree_ptr->left->left->left = malloc(sizeof(node));
-      // code_tree_ptr->left->left->right = malloc(sizeof(node));
-      // code_tree_ptr->left->left->back = code_tree_ptr->left;
-      // code_tree_ptr->left->right = malloc(sizeof(node));
-      // code_tree_ptr->left->right->type = END;
-      // code_tree_ptr->left->right->back = code_tree_ptr->left;
+      case '-':
+    case '+': {
 
-      // int restore_i_minus_i = 1;
-      // token *left_token_argument = malloc(sizeof(token));
-      // memcpy(left_token_argument, &code_lex[restore_i],
-      //        sizeof(token));
+      int restore_i = i;
+      i--;
+      while (i != -1 && code_lex[i].type != '+' && code_lex[i].type != '-') {
+        i--;
+      }
 
-      // code_tree_ptr->left->type = (enum node_type) code_lex[restore_i - 1].type; // in eval, just check if the other arg is an end to determine if its a sign or not
-      // code_tree_ptr->left->back = code_tree_ptr;
+      i++;
+      code_tree_ptr->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->type = PROGRAM;
+      code_tree_ptr->left->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = PROGRAM;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
+      code_tree_ptr->left->right->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->left = malloc(sizeof(node));
 
-      // tree(code_tree_ptr->left->left, left_token_argument, 1);
-      // code_tree_ptr->right->back = code_tree_ptr;
-      // code_tree_ptr->right->left = malloc(sizeof(node));
-      // code_tree_ptr->right->right = malloc(sizeof(node));
-      // code_tree_ptr->right->type = PROGRAM;
-      // tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
-      // return;}
+      int restore_i_minus_i = restore_i - i;
+      token *left_token_argument = malloc(sizeof(token) * restore_i_minus_i);
+      memcpy(left_token_argument, &code_lex[i],
+             sizeof(token) * restore_i_minus_i);
+
+      i = restore_i;
+      i++;
+      while (i != code_lex_index && code_lex[i].type != '+' &&
+             code_lex[i].type != '-') {
+        i++;
+      }
+
+      int i_minus_restore_i = i - restore_i - 1;
+      token *right_token_argument = malloc(sizeof(token) * (i_minus_restore_i));
+      memcpy(right_token_argument, &code_lex[restore_i + 1],
+             sizeof(token) * (i_minus_restore_i));
+
+      code_tree_ptr->left->type = (enum node_type)code_lex[restore_i].type;
+      code_tree_ptr->left->back = code_tree_ptr;
+
+      tree(code_tree_ptr->left->left, left_token_argument, restore_i_minus_i);
+      tree(code_tree_ptr->left->right, right_token_argument, i_minus_restore_i);
+
+      code_tree_ptr->right->back = code_tree_ptr;
+      code_tree_ptr->right->left = malloc(sizeof(node));
+      code_tree_ptr->right->right = malloc(sizeof(node));
+      code_tree_ptr->right->type = PROGRAM;
+      tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+      return;}
 
     case 'T':;
       int restore_i = i; // left
