@@ -4,7 +4,7 @@
 
 enum token_type;
 struct token_struct;
-char *symbols[] = {
+char *symbols[] = { "sizeof", "cast", "bitcast", // sort by char length of symbol
     "<<=", ">>=", "+=", "-=", "*=", "/=", "&=", "^=", "|=", "%=", "||",
     "&&",  "==",  "!=", ">=", "<=", "<<", ">>", "++", "--", "->"};
 #define LOCAL_LEN(ARR) (sizeof(ARR) / sizeof(ARR[0]))
@@ -32,10 +32,12 @@ typedef struct token_struct {
   struct token_struct *token_argument;
   struct token_struct *colon_argument;
   struct token_struct *brace_argument;
+  struct token_struct *brack_argument;
 
   size_t token_length;
   size_t colon_length;
   size_t brace_length;
+  size_t brack_length;
 } token;
 
 typedef struct node_struct {
@@ -73,6 +75,22 @@ void append_token_b(token **code_lex, size_t *code_lex_size,
   (*code_lex)[(*code_lex_index)].string_argument = string_argument;
   (*code_lex)[(*code_lex_index)].brace_argument = token_argument;
   (*code_lex)[(*code_lex_index)].brace_length = 0;
+  (*code_lex_index)++;
+}
+
+
+void append_token_bk(token **code_lex, size_t *code_lex_size,
+                    size_t *code_lex_index, enum token_type type,
+                    char *string_argument, token *token_argument) {
+  while ((*code_lex_size) < ((*code_lex_index) + 1) * sizeof(token)) {
+    (*code_lex_size) *= 2;
+    *code_lex = realloc(*code_lex, (*code_lex_size));
+  }
+
+  (*code_lex)[(*code_lex_index)].type = type;
+  (*code_lex)[(*code_lex_index)].string_argument = string_argument;
+  (*code_lex)[(*code_lex_index)].brack_argument = token_argument;
+  (*code_lex)[(*code_lex_index)].brack_length = 0;
   (*code_lex_index)++;
 }
 
@@ -125,7 +143,11 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
   int paren_mode = 0;
   int brace_mode = 0;
   int colon_mode = 0;
+  int brack_mode = 0;
   size_t paren_buf_start;
+  size_t brace_buf_start;
+  size_t colon_buf_start;
+  size_t brack_buf_start;
 
   int comment_mode = 0;
   int multi_comment_mode = 0;
@@ -204,10 +226,10 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
     if (brace_mode && raw_code[i] == '}') {
       brace_mode--;
 
-      int buf_size = i - paren_buf_start;
+      int buf_size = i - brace_buf_start;
       char *paren_arg =
           malloc(1 + buf_size); // free every string argument in parens
-      strncpy(paren_arg, &raw_code[paren_buf_start], buf_size);
+      strncpy(paren_arg, &raw_code[brace_buf_start], buf_size);
       paren_arg[buf_size] = '\0';
 
       size_t lexed_paren_index;
@@ -215,7 +237,8 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
           lex(paren_arg, strlen(paren_arg), &lexed_paren_index);
       if (code_lex_index > 0 && (code_lex[code_lex_index - 1].type == WORD ||
                                  code_lex[code_lex_index - 1].type == '(' ||
-                                 code_lex[code_lex_index - 1].type == ':')) {
+                                 code_lex[code_lex_index - 1].type == ':' ||
+                                 code_lex[code_lex_index - 1].type == '[')) {
         code_lex_index--;
         append_token_b(&code_lex, &code_lex_size, &code_lex_index, '{',
                        code_lex[code_lex_index].string_argument, lexed_paren);
@@ -231,18 +254,18 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
 
     if (!brace_mode && raw_code[i] == '{') {
       brace_mode++;
-      paren_buf_start = i + 1;
+      brace_buf_start = i + 1;
 
       continue;
     }
+    
+    if (brack_mode && raw_code[i] == ']') {
+      brack_mode--;
 
-    if (colon_mode && !letter_number_underscore_or_space(raw_code[i])) {
-      colon_mode--;
-
-      int buf_size = i - paren_buf_start;
+      int buf_size = i - brack_buf_start;
       char *paren_arg =
           malloc(1 + buf_size); // free every string argument in parens
-      strncpy(paren_arg, &raw_code[paren_buf_start], buf_size);
+      strncpy(paren_arg, &raw_code[brack_buf_start], buf_size);
       paren_arg[buf_size] = '\0';
 
       size_t lexed_paren_index;
@@ -250,7 +273,44 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
           lex(paren_arg, strlen(paren_arg), &lexed_paren_index);
       if (code_lex_index > 0 && (code_lex[code_lex_index - 1].type == WORD ||
                                  code_lex[code_lex_index - 1].type == '(' ||
-                                 code_lex[code_lex_index - 1].type == ':')) {
+                                 code_lex[code_lex_index - 1].type == ':' ||
+                                 code_lex[code_lex_index - 1].type == '[')) {
+        code_lex_index--;
+        append_token_bk(&code_lex, &code_lex_size, &code_lex_index, '[',
+                       code_lex[code_lex_index].string_argument, lexed_paren);
+      } else
+        append_token_bk(&code_lex, &code_lex_size, &code_lex_index, '[', NULL,
+                       lexed_paren);
+      code_lex[code_lex_index - 1].brack_length = lexed_paren_index;
+      free(paren_arg);
+
+      continue;
+    } else if (brack_mode)
+      continue;
+
+    if (!brack_mode && raw_code[i] == '[') { // give everything different buffer
+      brack_mode++;
+      brack_buf_start = i + 1;
+
+      continue;
+    }
+
+    if (colon_mode && !letter_number_underscore_or_space(raw_code[i])) {
+      colon_mode--;
+
+      int buf_size = i - colon_buf_start;
+      char *paren_arg =
+          malloc(1 + buf_size); // free every string argument in parens
+      strncpy(paren_arg, &raw_code[colon_buf_start], buf_size);
+      paren_arg[buf_size] = '\0';
+
+      size_t lexed_paren_index;
+      token *lexed_paren =
+          lex(paren_arg, strlen(paren_arg), &lexed_paren_index);
+      if (code_lex_index > 0 && (code_lex[code_lex_index - 1].type == WORD ||
+                                 code_lex[code_lex_index - 1].type == '(' ||
+                                 code_lex[code_lex_index - 1].type == ':' ||
+                                 code_lex[code_lex_index - 1].type == '[')) {
         code_lex_index--;
         append_token_c(&code_lex, &code_lex_size, &code_lex_index, ':',
                        code_lex[code_lex_index].string_argument, lexed_paren);
@@ -266,7 +326,7 @@ token *lex(char *raw_code, size_t strlen_argv_1, size_t *code_lex_index_ptr) {
 
     if (!colon_mode && raw_code[i] == ':') {
       colon_mode++;
-      paren_buf_start = i + 1;
+      colon_buf_start = i + 1;
 
       continue;
     }
@@ -1065,6 +1125,16 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
     else if (code_lex[i].type ==
         get_symbol("!!"))
       id = 'U';
+    else if (code_lex[i].type ==
+        get_symbol("cast")) // syntax will be "var_name cast: i32"
+                            // so type will be inside the cast symbol token
+      id = 'T';
+    else if (code_lex[i].type ==
+        get_symbol("bitcast")) 
+      id = 'T';
+    else if (code_lex[i].type ==
+        get_symbol("sizeof"))
+      id = 'U';
     else
       id = code_lex[i].type;
 
@@ -1135,6 +1205,63 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
     }
   }
 
+
+  for (int i = 0; i < code_lex_index; i++) {
+    int id = code_lex[i].type;
+
+    switch (id) {
+    case '.':;
+      int restore_i = i;
+      i--;
+      while (i != -1 && code_lex[i].type != '.') {
+        i--;
+      }
+
+      i++;
+      code_tree_ptr->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->type = PROGRAM;
+      code_tree_ptr->left->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = PROGRAM;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
+      code_tree_ptr->left->right->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->left = malloc(sizeof(node));
+
+      int restore_i_minus_i = restore_i - i;
+      token *left_token_argument = malloc(sizeof(token) * restore_i_minus_i);
+      memcpy(left_token_argument, &code_lex[i],
+             sizeof(token) * restore_i_minus_i);
+
+      i = restore_i;
+      i++;
+      while (i != code_lex_index && code_lex[i].type != '*' &&
+             code_lex[i].type != '%' && code_lex[i].type != '/') {
+        i++;
+      }
+
+      int i_minus_restore_i = i - restore_i - 1;
+      token *right_token_argument = malloc(sizeof(token) * (i_minus_restore_i));
+      memcpy(right_token_argument, &code_lex[restore_i + 1],
+             sizeof(token) * (i_minus_restore_i));
+
+      code_tree_ptr->left->type = (enum node_type)code_lex[restore_i].type;
+      code_tree_ptr->left->back = code_tree_ptr;
+
+      tree(code_tree_ptr->left->left, left_token_argument, restore_i_minus_i);
+      tree(code_tree_ptr->left->right, right_token_argument, i_minus_restore_i);
+
+      code_tree_ptr->right->back = code_tree_ptr;
+      code_tree_ptr->right->left = malloc(sizeof(node));
+      code_tree_ptr->right->right = malloc(sizeof(node));
+      code_tree_ptr->right->type = PROGRAM;
+      tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+      return;
+    default:
+      break;
+    }
+  }
 
     
   code_tree_ptr->type = LITERAL;
