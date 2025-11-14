@@ -1070,6 +1070,9 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
       code_tree_ptr->left->left->left = malloc(sizeof(node));
       code_tree_ptr->left->left->right = malloc(sizeof(node));
       code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = END;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
 
       int restore_i_minus_i = restore_i - i;
       token *left_token_argument = malloc(sizeof(token) * restore_i_minus_i);
