@@ -1,7 +1,7 @@
 # TODO
 My todo list for this project
 
-# Symbols to add to tree
+<!-- # Symbols to add to tree -->
 <!-- - while -->
 <!-- - else -->
 <!-- - for -->
