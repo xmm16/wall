@@ -106,6 +106,13 @@ void append_token(token **code_lex, size_t *code_lex_size,
   (*code_lex)[(*code_lex_index)].string_argument = string_argument;
   (*code_lex)[(*code_lex_index)].token_argument = token_argument;
   (*code_lex)[(*code_lex_index)].token_length = 0;
+
+  if (type == WORD) {
+    (*code_lex)[(*code_lex_index)].brace_length = 0;
+    (*code_lex)[(*code_lex_index)].brack_length = 0;
+    (*code_lex)[(*code_lex_index)].colon_length = 0;
+  }
+
   (*code_lex_index)++;
 }
 
@@ -1283,6 +1290,78 @@ void tree(node *code_tree_ptr, token *code_lex, size_t code_lex_index) {
       id = code_lex[i].type;
 
     switch (id) {
+    case '(': {
+      code_tree_ptr->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->type = PROGRAM;
+      code_tree_ptr->left->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = END;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
+
+      code_tree_ptr->left->type = (enum node_type)'(';
+      code_tree_ptr->left->back = code_tree_ptr;
+
+      tree(code_tree_ptr->left->left, code_lex[i].token_argument,
+           code_lex[i].token_length);
+      code_tree_ptr->right->back = code_tree_ptr;
+      code_tree_ptr->right->left = malloc(sizeof(node));
+      code_tree_ptr->right->right = malloc(sizeof(node));
+      code_tree_ptr->right->type = PROGRAM;
+      tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+      return;
+    }
+
+    case '{': {
+      code_tree_ptr->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->type = PROGRAM;
+      code_tree_ptr->left->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = END;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
+
+      code_tree_ptr->left->type = (enum node_type)'{';
+      code_tree_ptr->left->back = code_tree_ptr;
+
+      tree(code_tree_ptr->left->left, code_lex[i].brace_argument,
+           code_lex[i].brace_length);
+      code_tree_ptr->right->back = code_tree_ptr;
+      code_tree_ptr->right->left = malloc(sizeof(node));
+      code_tree_ptr->right->right = malloc(sizeof(node));
+      code_tree_ptr->right->type = PROGRAM;
+      tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+      return;
+    }
+
+    case '[': {
+      code_tree_ptr->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->type = PROGRAM;
+      code_tree_ptr->left->left->left = malloc(sizeof(node));
+      code_tree_ptr->left->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->left->back = code_tree_ptr->left;
+      code_tree_ptr->left->right = malloc(sizeof(node));
+      code_tree_ptr->left->right->type = END;
+      code_tree_ptr->left->right->back = code_tree_ptr->left;
+
+      code_tree_ptr->left->type = (enum node_type)'[';
+      code_tree_ptr->left->back = code_tree_ptr;
+
+      tree(code_tree_ptr->left->left, code_lex[i].brack_argument,
+           code_lex[i].brack_length);
+      code_tree_ptr->right->back = code_tree_ptr;
+      code_tree_ptr->right->left = malloc(sizeof(node));
+      code_tree_ptr->right->right = malloc(sizeof(node));
+      code_tree_ptr->right->type = PROGRAM;
+      tree(code_tree_ptr->right, &code_lex[i], code_lex_index - i);
+      return;
+    }
+
+    case WORD:
+      // ok so this is gonna handle attached parens, brackets, and braces.
+      // evaluator can handle colons itself
     case '.': {
       int restore_i = i;
       i--;
