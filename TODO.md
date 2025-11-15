@@ -10,3 +10,4 @@ My todo list for this project
 <!-- - parenthesis -->
 <!-- - brackets -->
 <!-- - braces -->
+clang -S -emit-llvm -O0 input.c -o input.ll
